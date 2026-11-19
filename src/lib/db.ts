@@ -3,12 +3,13 @@ import type { ClinicSettings, ConsentSection, ConsentTemplate, SignedConsent } f
 import { uid } from './types';
 
 const DB_NAME = 'dental-consent-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface StoreInfo {
   templates: 'templates';
   signed: 'signed';
   settings: 'settings';
+  meta: 'meta';
 }
 
 const section = (heading: string, body: string) => ({ id: uid(), heading, body });
@@ -128,6 +129,9 @@ function getDb(): Promise<IDBPDatabase> {
         if (!db.objectStoreNames.contains('settings')) {
           db.createObjectStore('settings', { keyPath: 'id' });
         }
+        if (!db.objectStoreNames.contains('meta')) {
+          db.createObjectStore('meta', { keyPath: 'id' });
+        }
       },
     });
   }
@@ -138,11 +142,11 @@ export async function getTemplates(): Promise<ConsentTemplate[]> {
   try {
     const db = await getDb();
     const all = (await db.getAll('templates')) as ConsentTemplate[];
-    if (all.length === 0 && !(await db.get('templates', 'seeded'))) {
+    if (all.length === 0 && !(await db.get('meta', 'seeded'))) {
       const seeded = seedTemplates();
-      const tx = db.transaction('templates', 'readwrite');
-      for (const t of seeded) tx.store.put(t);
-      tx.store.put(true, 'seeded');
+      const tx = db.transaction(['templates', 'meta'], 'readwrite');
+      for (const t of seeded) tx.objectStore('templates').put(t);
+      tx.objectStore('meta').put({ id: 'seeded', value: true });
       await tx.done;
       return seeded;
     }
