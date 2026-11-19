@@ -1,4 +1,4 @@
-const CACHE = 'dental-consent-v1';
+const CACHE = 'dental-consent-v2';
 const CORE = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +22,25 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put('/index.html', copy));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches
+            .match('/index.html')
+            .then((fallback) => fallback || caches.match(request) || Response.error()),
+        ),
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request)
@@ -32,11 +51,7 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() =>
-          request.mode === 'navigate'
-            ? caches.match('/index.html').then((fallback) => fallback || Response.error())
-            : Response.error(),
-        );
+        .catch(() => Response.error());
       return cached || network;
     }),
   );
