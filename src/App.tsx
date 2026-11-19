@@ -192,15 +192,32 @@ export default function App() {
   }
 
   if (state === 'error') {
+    const embeddedPreview = window.self !== window.top;
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="card max-w-md p-8 text-center">
           <p className="font-semibold text-slate-900">Stored data could not be opened</p>
           <p className="mt-2 text-sm text-slate-600">{loadError}</p>
-          <p className="mt-4 text-sm text-slate-500">
-            Try reloading the app. If the problem continues, check this device's storage settings -
-            private browsing modes may block saved data.
-          </p>
+          {embeddedPreview ? (
+            <>
+              <p className="mt-4 text-sm text-slate-500">
+                This preview window may block private device storage. Open the published app in a new browser tab instead.
+              </p>
+              <a
+                href={window.location.href}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-primary mt-5 inline-flex"
+              >
+                Open app in a new tab
+              </a>
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">
+              Try reloading the app in a normal Safari or Chrome window. Private browsing modes may block saved data.
+            </p>
+          )}
         </div>
       </div>
     );
